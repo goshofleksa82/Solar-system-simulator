@@ -4,7 +4,21 @@
 #define WIDTH 900
 #define HEIGHT 600
 
-int main(int argc, char *argv[]) {
+struct Circle
+{
+    int x;
+    int y;
+    int radius;
+};
+
+
+void FillCircle(SDL_Surface* surface, struct Circle circle)
+{
+
+}
+
+int main(int argc, char *argv[]) 
+{
     SDL_Init(SDL_INIT_VIDEO);
 
     SDL_Window* window = SDL_CreateWindow("Centered Rectangle", WIDTH, HEIGHT, SDL_WINDOW_RESIZABLE);
