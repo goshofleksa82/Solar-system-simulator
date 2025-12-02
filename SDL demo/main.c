@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include "sqlite3.h"
+
+
 
 #define WIDTH 1600
 #define HEIGHT 1000
