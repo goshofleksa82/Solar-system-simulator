@@ -11,10 +11,6 @@
 #define NUM_ASTEROIDS 150
 #define NUM_MOONS     10
 
-// =========================================
-// BASIC STRUCTS
-// =========================================
-
 struct Circle {
     float x;
     float y;
@@ -23,16 +19,14 @@ struct Circle {
 };
 
 typedef struct {
-    struct Circle circle;   // visual
+    struct Circle circle;
     float orbitRadius;
     float angularSpeed;
     float angle;
-
     float worldX, worldZ;
     float depth;
     float screenRadius;
-
-    char name[64];
+    char  name[64];
 } Planet;
 
 struct Moon {
@@ -40,18 +34,12 @@ struct Moon {
     float y;
     float radius;
     Uint8 r, g, b;
-
     int   parentIndex;
     char  parentName[32];
-
     float orbitRadius;
     float angle;
     float angularSpeed;
 };
-
-// =========================================
-// UI TEXT FIELD
-// =========================================
 
 typedef struct {
     const char *label;
@@ -71,9 +59,7 @@ typedef enum {
     FIELD_COUNT
 } FieldId;
 
-// =========================================
-// DRAW HELPERS (CIRCLES)
-// =========================================
+/* -------- Circle drawing -------- */
 
 void DrawFillCircle(SDL_Renderer *renderer, float cx, float cy, float radius)
 {
@@ -81,10 +67,8 @@ void DrawFillCircle(SDL_Renderer *renderer, float cx, float cy, float radius)
         SDL_RenderPoint(renderer, cx, cy);
         return;
     }
-
     int r = (int)(radius + 0.5f);
     int r2 = r * r;
-
     for (int y = -r; y <= r; ++y) {
         int yy = y * y;
         if (yy > r2) continue;
@@ -99,13 +83,10 @@ void DrawCircle(SDL_Renderer *renderer, float cx, float cy, float radius)
         SDL_RenderPoint(renderer, cx, cy);
         return;
     }
-
     float x = radius;
     float y = 0;
     float d = 1 - x;
-
-    while (y <= x)
-    {
+    while (y <= x) {
         SDL_RenderPoint(renderer, cx + x, cy + y);
         SDL_RenderPoint(renderer, cx + y, cy + x);
         SDL_RenderPoint(renderer, cx - y, cy + x);
@@ -114,98 +95,51 @@ void DrawCircle(SDL_Renderer *renderer, float cx, float cy, float radius)
         SDL_RenderPoint(renderer, cx - y, cy - x);
         SDL_RenderPoint(renderer, cx + y, cy - x);
         SDL_RenderPoint(renderer, cx + x, cy - y);
-
         y++;
-
-        if (d <= 0)
-            d += 2 * y + 1;
-        else {
-            x--;
-            d += 2 * (y - x) + 1;
-        }
+        if (d <= 0) d += 2 * y + 1;
+        else { x--; d += 2 * (y - x) + 1; }
     }
 }
 
-// =========================================
-// 5x7 BITMAP FONT (DIGITS + A-Z)
-// =========================================
+/* -------- Bitmap font (5x7, 0–9 + A–Z) -------- */
 
 static const unsigned char font5x7[36][7] = {
-    // 0
-    {0x0E,0x11,0x13,0x15,0x19,0x11,0x0E},
-    // 1
-    {0x04,0x0C,0x04,0x04,0x04,0x04,0x0E},
-    // 2
-    {0x0E,0x11,0x01,0x06,0x08,0x10,0x1F},
-    // 3
-    {0x1F,0x02,0x04,0x02,0x01,0x11,0x0E},
-    // 4
-    {0x02,0x06,0x0A,0x12,0x1F,0x02,0x02},
-    // 5
-    {0x1F,0x10,0x1E,0x01,0x01,0x11,0x0E},
-    // 6
-    {0x06,0x08,0x10,0x1E,0x11,0x11,0x0E},
-    // 7
-    {0x1F,0x01,0x02,0x04,0x08,0x08,0x08},
-    // 8
-    {0x0E,0x11,0x11,0x0E,0x11,0x11,0x0E},
-    // 9
-    {0x0E,0x11,0x11,0x0F,0x01,0x02,0x0C},
-
-    // A
-    {0x0E,0x11,0x11,0x1F,0x11,0x11,0x11},
-    // B
-    {0x1E,0x11,0x11,0x1E,0x11,0x11,0x1E},
-    // C
-    {0x0E,0x11,0x10,0x10,0x10,0x11,0x0E},
-    // D
-    {0x1E,0x11,0x11,0x11,0x11,0x11,0x1E},
-    // E
-    {0x1F,0x10,0x10,0x1E,0x10,0x10,0x1F},
-    // F
-    {0x1F,0x10,0x10,0x1E,0x10,0x10,0x10},
-    // G
-    {0x0E,0x11,0x10,0x17,0x11,0x11,0x0E},
-    // H
-    {0x11,0x11,0x11,0x1F,0x11,0x11,0x11},
-    // I
-    {0x0E,0x04,0x04,0x04,0x04,0x04,0x0E},
-    // J
-    {0x07,0x02,0x02,0x02,0x02,0x12,0x0C},
-
-    // K
-    {0x11,0x12,0x14,0x18,0x14,0x12,0x11},
-    // L
-    {0x10,0x10,0x10,0x10,0x10,0x10,0x1F},
-    // M
-    {0x11,0x1B,0x15,0x11,0x11,0x11,0x11},
-    // N
-    {0x11,0x19,0x15,0x13,0x11,0x11,0x11},
-    // O
-    {0x0E,0x11,0x11,0x11,0x11,0x11,0x0E},
-    // P
-    {0x1E,0x11,0x11,0x1E,0x10,0x10,0x10},
-    // Q
-    {0x0E,0x11,0x11,0x11,0x15,0x12,0x0D},
-    // R
-    {0x1E,0x11,0x11,0x1E,0x14,0x12,0x11},
-    // S
-    {0x0F,0x10,0x10,0x0E,0x01,0x01,0x1E},
-    // T
-    {0x1F,0x04,0x04,0x04,0x04,0x04,0x04},
-
-    // U
-    {0x11,0x11,0x11,0x11,0x11,0x11,0x0E},
-    // V
-    {0x11,0x11,0x11,0x11,0x11,0x0A,0x04},
-    // W
-    {0x11,0x11,0x11,0x15,0x15,0x1B,0x11},
-    // X
-    {0x11,0x11,0x0A,0x04,0x0A,0x11,0x11},
-    // Y
-    {0x11,0x11,0x0A,0x04,0x04,0x04,0x04},
-    // Z
-    {0x1F,0x01,0x02,0x04,0x08,0x10,0x1F}
+    {0x0E,0x11,0x13,0x15,0x19,0x11,0x0E}, // 0
+    {0x04,0x0C,0x04,0x04,0x04,0x04,0x0E}, // 1
+    {0x0E,0x11,0x01,0x06,0x08,0x10,0x1F}, // 2
+    {0x1F,0x02,0x04,0x02,0x01,0x11,0x0E}, // 3
+    {0x02,0x06,0x0A,0x12,0x1F,0x02,0x02}, // 4
+    {0x1F,0x10,0x1E,0x01,0x01,0x11,0x0E}, // 5
+    {0x06,0x08,0x10,0x1E,0x11,0x11,0x0E}, // 6
+    {0x1F,0x01,0x02,0x04,0x08,0x08,0x08}, // 7
+    {0x0E,0x11,0x11,0x0E,0x11,0x11,0x0E}, // 8
+    {0x0E,0x11,0x11,0x0F,0x01,0x02,0x0C}, // 9
+    {0x0E,0x11,0x11,0x1F,0x11,0x11,0x11}, // A
+    {0x1E,0x11,0x11,0x1E,0x11,0x11,0x1E}, // B
+    {0x0E,0x11,0x10,0x10,0x10,0x11,0x0E}, // C
+    {0x1E,0x11,0x11,0x11,0x11,0x11,0x1E}, // D
+    {0x1F,0x10,0x10,0x1E,0x10,0x10,0x1F}, // E
+    {0x1F,0x10,0x10,0x1E,0x10,0x10,0x10}, // F
+    {0x0E,0x11,0x10,0x17,0x11,0x11,0x0E}, // G
+    {0x11,0x11,0x11,0x1F,0x11,0x11,0x11}, // H
+    {0x0E,0x04,0x04,0x04,0x04,0x04,0x0E}, // I
+    {0x07,0x02,0x02,0x02,0x02,0x12,0x0C}, // J
+    {0x11,0x12,0x14,0x18,0x14,0x12,0x11}, // K
+    {0x10,0x10,0x10,0x10,0x10,0x10,0x1F}, // L
+    {0x11,0x1B,0x15,0x11,0x11,0x11,0x11}, // M
+    {0x11,0x19,0x15,0x13,0x11,0x11,0x11}, // N
+    {0x0E,0x11,0x11,0x11,0x11,0x11,0x0E}, // O
+    {0x1E,0x11,0x11,0x1E,0x10,0x10,0x10}, // P
+    {0x0E,0x11,0x11,0x11,0x15,0x12,0x0D}, // Q
+    {0x1E,0x11,0x11,0x1E,0x14,0x12,0x11}, // R
+    {0x0F,0x10,0x10,0x0E,0x01,0x01,0x1E}, // S
+    {0x1F,0x04,0x04,0x04,0x04,0x04,0x04}, // T
+    {0x11,0x11,0x11,0x11,0x11,0x11,0x0E}, // U
+    {0x11,0x11,0x11,0x11,0x11,0x0A,0x04}, // V
+    {0x11,0x11,0x11,0x15,0x15,0x1B,0x11}, // W
+    {0x11,0x11,0x0A,0x04,0x0A,0x11,0x11}, // X
+    {0x11,0x11,0x0A,0x04,0x04,0x04,0x04}, // Y
+    {0x1F,0x01,0x02,0x04,0x08,0x10,0x1F}  // Z
 };
 
 static int FontIndexForChar(char c)
@@ -220,7 +154,6 @@ static void DrawChar(SDL_Renderer *renderer, float x, float y, char c, float sca
 {
     int idx = FontIndexForChar(c);
     if (idx < 0) return;
-
     for (int row = 0; row < 7; ++row) {
         unsigned char bits = font5x7[idx][row];
         for (int col = 0; col < 5; ++col) {
@@ -249,9 +182,7 @@ static void DrawText(SDL_Renderer *renderer, float x, float y, const char *text,
     }
 }
 
-// =========================================
-// 3D PROJECTION
-// =========================================
+/* -------- Projection -------- */
 
 static void ProjectXZ3D(
     float worldX, float worldZ,
@@ -264,26 +195,19 @@ static void ProjectXZ3D(
 {
     float x1 =  worldX * cosYaw + worldZ * sinYaw;
     float z1 = -worldX * sinYaw + worldZ * cosYaw;
-
     float y1 = 0.0f;
-
     float y2 =  y1 * cosPitch - z1 * sinPitch;
     float z2 =  y1 * sinPitch + z1 * cosPitch;
     float x2 =  x1;
-
     float cz = z2 + camDist;
     if (cz < 1.0f) cz = 1.0f;
-
     float inv = fov / cz;
     *outX = cx + panX + x2 * inv;
     *outY = cy + panY + y2 * inv;
-
     if (outDepth) *outDepth = cz;
 }
 
-// =========================================
-// LOAD PLANETS FROM TEXT FILE
-// =========================================
+/* -------- File I/O -------- */
 
 static int LoadPlanetsFromTextFile(const char *filename,
                                    Planet **outPlanets,
@@ -294,25 +218,19 @@ static int LoadPlanetsFromTextFile(const char *filename,
         fprintf(stderr, "Failed to open planets file '%s'\n", filename);
         return 0;
     }
-
     Planet *planets = NULL;
     int count = 0;
     char line[512];
 
     while (fgets(line, sizeof(line), fp)) {
-        if (line[0] == '#' || strlen(line) < 5)
-            continue;
-
+        if (line[0] == '#' || strlen(line) < 5) continue;
         char name[64];
         float orbitRadius, angularSpeed, radius;
         int r, g, b;
-
         int n = sscanf(line, "%63s %f %f %f %d %d %d",
                        name, &orbitRadius, &angularSpeed,
                        &radius, &r, &g, &b);
-
-        if (n != 7)
-            continue;
+        if (n != 7) continue;
 
         Planet *tmp = (Planet *)realloc(planets, sizeof(Planet) * (count + 1));
         if (!tmp) {
@@ -321,40 +239,28 @@ static int LoadPlanetsFromTextFile(const char *filename,
             return 0;
         }
         planets = tmp;
-
         Planet *p = &planets[count];
         memset(p, 0, sizeof(*p));
-
-        strncpy(p->name, name, sizeof(p->name)-1);
+        strncpy(p->name, name, sizeof(p->name) - 1);
         p->orbitRadius  = orbitRadius;
         p->angularSpeed = angularSpeed;
         p->angle        = 0.0f;
-
         p->circle.radius = radius;
         p->circle.r = (Uint8)r;
         p->circle.g = (Uint8)g;
         p->circle.b = (Uint8)b;
-
         p->worldX = 0.0f;
         p->worldZ = p->orbitRadius;
         p->depth  = 1.0f;
         p->screenRadius = 0.0f;
-
         count++;
     }
-
     fclose(fp);
-
     *outPlanets = planets;
     *outCount   = count;
-
     printf("Loaded %d planets from '%s'\n", count, filename);
     return (count > 0);
 }
-
-// =========================================
-// MOON PARENT RESOLUTION
-// =========================================
 
 static void ResolveMoonParents(struct Moon *moons,
                                int numMoons,
@@ -369,21 +275,7 @@ static void ResolveMoonParents(struct Moon *moons,
                 break;
             }
         }
-        if (moons[i].parentIndex < 0) {
-            fprintf(stderr, "Warning: moon parent '%s' not found.\n",
-                    moons[i].parentName);
-        }
     }
-}
-
-// =========================================
-// UI HELPERS
-// =========================================
-
-static bool PointInRect(float x, float y, SDL_FRect *rect)
-{
-    return (x >= rect->x && x <= rect->x + rect->w &&
-            y >= rect->y && y <= rect->y + rect->h);
 }
 
 static void ClampColorInt(int *v)
@@ -392,7 +284,6 @@ static void ClampColorInt(int *v)
     if (*v > 255) *v = 255;
 }
 
-// Append new planet based on text fields; return 1 on success
 static int SavePlanetFromFieldsToFile(const char *filename, TextField fields[FIELD_COUNT])
 {
     const char *name   = fields[FIELD_NAME].text;
@@ -423,18 +314,50 @@ static int SavePlanetFromFieldsToFile(const char *filename, TextField fields[FIE
         fprintf(stderr, "Failed to open '%s' for appending.\n", filename);
         return 0;
     }
-
     fprintf(fp, "%s %.3f %.5f %.3f %d %d %d\n",
             name, orbitRadius, angularSpeed, radius, r, g, b);
     fclose(fp);
-
     printf("Added planet: %s\n", name);
     return 1;
 }
 
-// =========================================
-// MAIN
-// =========================================
+static int RemovePlanetAtIndexInFile(const char *filename,
+                                     Planet *planets, int numPlanets,
+                                     int removeIndex)
+{
+    if (removeIndex < 0 || removeIndex >= numPlanets) return 0;
+
+    FILE *fp = fopen(filename, "w");
+    if (!fp) {
+        fprintf(stderr, "Failed to open '%s' for rewrite.\n", filename);
+        return 0;
+    }
+    for (int i = 0; i < numPlanets; i++) {
+        if (i == removeIndex) continue;
+        Planet *p = &planets[i];
+        fprintf(fp, "%s %.3f %.5f %.3f %d %d %d\n",
+                p->name,
+                p->orbitRadius,
+                p->angularSpeed,
+                p->circle.radius,
+                p->circle.r,
+                p->circle.g,
+                p->circle.b);
+    }
+    fclose(fp);
+    printf("Removed planet: %s\n", planets[removeIndex].name);
+    return 1;
+}
+
+/* -------- UI helpers -------- */
+
+static bool PointInRect(float x, float y, const SDL_FRect *rect)
+{
+    return (x >= rect->x && x <= rect->x + rect->w &&
+            y >= rect->y && y <= rect->y + rect->h);
+}
+
+/* -------- Main -------- */
 
 int main(int argc, char *argv[])
 {
@@ -444,7 +367,7 @@ int main(int argc, char *argv[])
     }
 
     SDL_Window *window = SDL_CreateWindow(
-        "3D-ish Solar System (Add Planet UI)",
+        "3D-ish Solar System (Add/Remove Planet)",
         WIDTH, HEIGHT,
         SDL_WINDOW_RESIZABLE);
     if (!window) {
@@ -465,7 +388,6 @@ int main(int argc, char *argv[])
 
     Planet *planets = NULL;
     int numPlanets = 0;
-
     if (!LoadPlanetsFromTextFile(PLANETS_FILE, &planets, &numPlanets) || numPlanets == 0) {
         fprintf(stderr, "No planets loaded. Ensure 'planets.txt' exists.\n");
         SDL_DestroyRenderer(renderer);
@@ -474,16 +396,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // CAMERA
-    const float BASE_FOV  = 800.0f;
-    const float CAM_DIST  = 1500.0f;
-
+    const float BASE_FOV = 800.0f;
+    const float CAM_DIST = 1500.0f;
     float zoom = 0.7f;
     float camYaw   = 0.5f;
     float camPitch = 0.5f;
     float camPanX  = 0.0f;
     float camPanY  = 0.0f;
-
     const float ROTATE_SENS = 0.005f;
     const float PAN_SENS    = 1.0f;
 
@@ -492,14 +411,11 @@ int main(int argc, char *argv[])
 
     srand(42);
 
-    // SUN
     struct Circle sun = {0,0,30,255,255,0};
     float sunScreenX=0, sunScreenY=0, sunDepth=1, sunScreenRadius=1;
 
-    // ASTEROID BELT between Mars (150) and Jupiter (250)
     float innerBelt = 170.0f;
     float outerBelt = 230.0f;
-
     float asteroid_radius[NUM_ASTEROIDS];
     float asteroid_angle[NUM_ASTEROIDS];
     float asteroid_speed[NUM_ASTEROIDS];
@@ -510,7 +426,6 @@ int main(int argc, char *argv[])
         asteroid_speed[i]  = 0.01f + (float)rand()/RAND_MAX * 0.005f;
     }
 
-    // MOONS
     struct Moon moons[NUM_MOONS] = {
         {0,0, 3,210,210,210, -1, "Earth",  18,0,0.08f},
         {0,0, 2,200,200,200, -1, "Mars",   10,1,0.10f},
@@ -524,44 +439,43 @@ int main(int argc, char *argv[])
         {0,0, 3,180,200,255, -1, "Neptune",22,2.0f,0.06f}
     };
     float moonDepth[NUM_MOONS];
-
     ResolveMoonParents(moons, NUM_MOONS, planets, numPlanets);
 
     int selectedPlanet = -1;
+    SDL_Event e;
     int running = 1;
 
-    SDL_Event e;
+    SDL_FRect addButton    = {10.0f, 10.0f, 160.0f, 40.0f};
+    SDL_FRect removeButton = {180.0f,10.0f, 180.0f, 40.0f};
 
-    // "Add Planet" button
-    SDL_FRect addButton = {10.0f, 10.0f, 160.0f, 40.0f};
-
-    // Add Planet UI
-    bool  addPanelOpen = false;
+    bool addPanelOpen = false;
     FieldId activeField = FIELD_NAME;
     TextField fields[FIELD_COUNT] = {
-        {"NAME",        "",  32, false},
-        {"ORBIT",       "",  16, true },
-        {"SPEED",       "",  16, true },
-        {"RADIUS",      "",  16, true },
-        {"COLOR R",     "",  4,  true },
-        {"COLOR G",     "",  4,  true },
-        {"COLOR B",     "",  4,  true }
+        {"NAME",    "", 32, false},
+        {"ORBIT",   "", 16, true },
+        {"SPEED",   "", 16, true },
+        {"RADIUS",  "", 16, true },
+        {"COLOR R", "", 4,  true },
+        {"COLOR G", "", 4,  true },
+        {"COLOR B", "", 4,  true }
     };
-
-    // Defaults for color
     strcpy(fields[FIELD_R].text, "200");
     strcpy(fields[FIELD_G].text, "200");
     strcpy(fields[FIELD_B].text, "200");
 
+    bool removePanelOpen    = false;
+    bool removeConfirmOpen  = false;
+    int  removeCandidateIdx = -1;
+
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
     while (running) {
-        // EVENTS
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_EVENT_QUIT) {
                 running = 0;
             }
-            else if (!addPanelOpen && e.type == SDL_EVENT_MOUSE_WHEEL) {
+            else if (!addPanelOpen && !removePanelOpen &&
+                     e.type == SDL_EVENT_MOUSE_WHEEL) {
                 zoom += (e.wheel.y > 0 ? 0.1f : -0.1f);
                 if (zoom < 0.2f) zoom = 0.2f;
                 if (zoom > 5.0f) zoom = 5.0f;
@@ -571,24 +485,28 @@ int main(int argc, char *argv[])
                 if (e.button.button == SDL_BUTTON_RIGHT) mouseRight = 1;
                 lastX = (int)e.button.x;
                 lastY = (int)e.button.y;
-
                 float mx = (float)e.button.x;
                 float my = (float)e.button.y;
 
-                if (!addPanelOpen) {
-                    // Check Add button
+                if (!addPanelOpen && !removePanelOpen) {
                     if (PointInRect(mx, my, &addButton)) {
                         addPanelOpen = true;
+                        removePanelOpen = false;
                         activeField = FIELD_NAME;
-                        SDL_StartTextInput(window);  // SDL3: needs window
-
-                        // Clear some input, keep default colors
+                        SDL_StartTextInput(window);
                         fields[FIELD_NAME].text[0]   = '\0';
                         fields[FIELD_ORBIT].text[0]  = '\0';
                         fields[FIELD_SPEED].text[0]  = '\0';
                         fields[FIELD_RADIUS].text[0] = '\0';
-                    } else {
-                        // Planet selection
+                    }
+                    else if (PointInRect(mx, my, &removeButton)) {
+                        removePanelOpen   = true;
+                        removeConfirmOpen = false;
+                        removeCandidateIdx = -1;
+                        addPanelOpen = false;
+                        SDL_StopTextInput(window);
+                    }
+                    else {
                         selectedPlanet = -1;
                         for (int i = 0; i < numPlanets; i++) {
                             float dx = mx - planets[i].circle.x;
@@ -597,8 +515,8 @@ int main(int argc, char *argv[])
                                 selectedPlanet = i;
                         }
                     }
-                } else {
-                    // Click inside add panel UI for field selection / buttons
+                }
+                else if (addPanelOpen) {
                     int winW, winH;
                     SDL_GetWindowSize(window, &winW, &winH);
                     SDL_FRect panel = {
@@ -607,13 +525,11 @@ int main(int argc, char *argv[])
                         700.0f,
                         440.0f
                     };
-
                     float px = panel.x + 30.0f;
                     float py = panel.y + 60.0f;
                     float rowH = 40.0f;
                     float labelWidth = 140.0f;
                     SDL_FRect fieldRects[FIELD_COUNT];
-
                     for (int i = 0; i < FIELD_COUNT; i++) {
                         SDL_FRect r = {
                             px + labelWidth,
@@ -623,8 +539,6 @@ int main(int argc, char *argv[])
                         };
                         fieldRects[i] = r;
                     }
-
-                    // Buttons
                     SDL_FRect saveBtn = {
                         panel.x + 80.0f,
                         panel.y + panel.h - 70.0f,
@@ -638,7 +552,6 @@ int main(int argc, char *argv[])
                         40.0f
                     };
 
-                    // Click on fields
                     bool fieldHit = false;
                     for (int i = 0; i < FIELD_COUNT; i++) {
                         if (PointInRect(mx, my, &fieldRects[i])) {
@@ -647,15 +560,11 @@ int main(int argc, char *argv[])
                             break;
                         }
                     }
-
                     if (!fieldHit) {
-                        // Click Save
                         if (PointInRect(mx, my, &saveBtn)) {
                             if (SavePlanetFromFieldsToFile(PLANETS_FILE, fields)) {
-                                // Reload planets
                                 free(planets);
                                 planets = NULL;
-                                numPlanets = 0;
                                 if (!LoadPlanetsFromTextFile(PLANETS_FILE, &planets, &numPlanets)) {
                                     fprintf(stderr, "Failed to reload planets after save.\n");
                                     running = 0;
@@ -664,12 +573,100 @@ int main(int argc, char *argv[])
                                 }
                             }
                             addPanelOpen = false;
-                            SDL_StopTextInput(window);  // SDL3: needs window
+                            SDL_StopTextInput(window);
                         }
-                        // Click Cancel
                         else if (PointInRect(mx, my, &cancelBtn)) {
                             addPanelOpen = false;
-                            SDL_StopTextInput(window);  // SDL3
+                            SDL_StopTextInput(window);
+                        }
+                    }
+                }
+                else if (removePanelOpen) {
+                    int winW, winH;
+                    SDL_GetWindowSize(window, &winW, &winH);
+                    SDL_FRect panel = {
+                        winW * 0.5f - 350.0f,
+                        winH * 0.5f - 220.0f,
+                        700.0f,
+                        440.0f
+                    };
+                    SDL_FRect closeBtn = {
+                        panel.x + panel.w - 180.0f,
+                        panel.y + panel.h - 60.0f,
+                        140.0f,
+                        35.0f
+                    };
+                    bool handled = false;
+
+                    if (removeConfirmOpen && removeCandidateIdx >= 0 &&
+                        removeCandidateIdx < numPlanets) {
+                        SDL_FRect confirmBox = {
+                            panel.x + 50.0f,
+                            panel.y + panel.h - 150.0f,
+                            panel.w - 100.0f,
+                            70.0f
+                        };
+                        SDL_FRect yesBtn = {
+                            confirmBox.x + 40.0f,
+                            confirmBox.y + 30.0f,
+                            180.0f,
+                            30.0f
+                        };
+                        SDL_FRect noBtn = {
+                            confirmBox.x + confirmBox.w - 220.0f,
+                            confirmBox.y + 30.0f,
+                            180.0f,
+                            30.0f
+                        };
+                        if (PointInRect(mx, my, &yesBtn)) {
+                            if (RemovePlanetAtIndexInFile(PLANETS_FILE, planets, numPlanets,
+                                                          removeCandidateIdx)) {
+                                free(planets);
+                                planets = NULL;
+                                if (!LoadPlanetsFromTextFile(PLANETS_FILE, &planets, &numPlanets)) {
+                                    fprintf(stderr, "Failed to reload planets after removal.\n");
+                                    running = 0;
+                                } else {
+                                    ResolveMoonParents(moons, NUM_MOONS, planets, numPlanets);
+                                }
+                            }
+                            removePanelOpen   = false;
+                            removeConfirmOpen = false;
+                            removeCandidateIdx = -1;
+                            handled = true;
+                        } else if (PointInRect(mx, my, &noBtn)) {
+                            removeConfirmOpen  = false;
+                            removeCandidateIdx = -1;
+                            handled = true;
+                        }
+                    }
+
+                    if (!handled && !removeConfirmOpen) {
+                        float px = panel.x + 30.0f;
+                        float py = panel.y + 60.0f;
+                        float rowH = 32.0f;
+                        int maxRows = (int)((panel.h - 140.0f) / rowH);
+                        if (maxRows > numPlanets) maxRows = numPlanets;
+
+                        bool rowHit = false;
+                        for (int i = 0; i < maxRows; i++) {
+                            SDL_FRect rowRect = {
+                                px,
+                                py + i*rowH,
+                                panel.w - 60.0f,
+                                rowH - 4.0f
+                            };
+                            if (PointInRect(mx, my, &rowRect)) {
+                                removeCandidateIdx = i;
+                                removeConfirmOpen  = true;
+                                rowHit = true;
+                                break;
+                            }
+                        }
+                        if (!rowHit && PointInRect(mx, my, &closeBtn)) {
+                            removePanelOpen   = false;
+                            removeConfirmOpen = false;
+                            removeCandidateIdx = -1;
                         }
                     }
                 }
@@ -678,14 +675,14 @@ int main(int argc, char *argv[])
                 if (e.button.button == SDL_BUTTON_LEFT) mouseLeft = 0;
                 if (e.button.button == SDL_BUTTON_RIGHT) mouseRight = 0;
             }
-            else if (!addPanelOpen && e.type == SDL_EVENT_MOUSE_MOTION) {
+            else if (!addPanelOpen && !removePanelOpen &&
+                     e.type == SDL_EVENT_MOUSE_MOTION) {
                 int mx = (int)e.motion.x;
                 int my = (int)e.motion.y;
                 int dx = mx - lastX;
                 int dy = my - lastY;
                 lastX = mx;
                 lastY = my;
-
                 if (mouseLeft) {
                     camYaw   += dx * ROTATE_SENS;
                     camPitch += dy * ROTATE_SENS;
@@ -698,37 +695,30 @@ int main(int argc, char *argv[])
                 }
             }
             else if (addPanelOpen && e.type == SDL_EVENT_TEXT_INPUT) {
-                // Text input for current field
                 TextField *tf = &fields[activeField];
                 int len = (int)strlen(tf->text);
                 const char *p = e.text.text;
                 while (*p && len < tf->maxLen - 1) {
                     char ch = *p++;
                     if (tf->numericOnly) {
-                        if (!((ch >= '0' && ch <= '9') || ch == '.' || ch == '-')) {
-                            continue;
-                        }
+                        if (!((ch >= '0' && ch <= '9') || ch == '.' || ch == '-')) continue;
                     }
                     tf->text[len++] = ch;
                     tf->text[len] = '\0';
                 }
             }
             else if (addPanelOpen && e.type == SDL_EVENT_KEY_DOWN) {
-                SDL_Keycode key = e.key.key;    // SDL3: key, not keysym.sym
+                SDL_Keycode key = e.key.key;
                 TextField *tf = &fields[activeField];
-
                 if (key == SDLK_BACKSPACE) {
                     int len = (int)strlen(tf->text);
-                    if (len > 0) {
-                        tf->text[len-1] = '\0';
-                    }
+                    if (len > 0) tf->text[len-1] = '\0';
                 } else if (key == SDLK_TAB) {
                     activeField = (FieldId)((activeField + 1) % FIELD_COUNT);
                 } else if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
                     if (SavePlanetFromFieldsToFile(PLANETS_FILE, fields)) {
                         free(planets);
                         planets = NULL;
-                        numPlanets = 0;
                         if (!LoadPlanetsFromTextFile(PLANETS_FILE, &planets, &numPlanets)) {
                             fprintf(stderr, "Failed to reload planets after save.\n");
                             running = 0;
@@ -737,20 +727,48 @@ int main(int argc, char *argv[])
                         }
                     }
                     addPanelOpen = false;
-                    SDL_StopTextInput(window);   // SDL3
+                    SDL_StopTextInput(window);
                 } else if (key == SDLK_ESCAPE) {
                     addPanelOpen = false;
-                    SDL_StopTextInput(window);   // SDL3
+                    SDL_StopTextInput(window);
                 }
             }
-        } // end events
+            else if (removePanelOpen && e.type == SDL_EVENT_KEY_DOWN) {
+                SDL_Keycode key = e.key.key;
+                if (key == SDLK_ESCAPE) {
+                    if (removeConfirmOpen) {
+                        removeConfirmOpen  = false;
+                        removeCandidateIdx = -1;
+                    } else {
+                        removePanelOpen   = false;
+                        removeConfirmOpen = false;
+                        removeCandidateIdx = -1;
+                    }
+                } else if ((key == SDLK_RETURN || key == SDLK_KP_ENTER) &&
+                           removeConfirmOpen && removeCandidateIdx >= 0 &&
+                           removeCandidateIdx < numPlanets) {
+                    if (RemovePlanetAtIndexInFile(PLANETS_FILE, planets, numPlanets,
+                                                  removeCandidateIdx)) {
+                        free(planets);
+                        planets = NULL;
+                        if (!LoadPlanetsFromTextFile(PLANETS_FILE, &planets, &numPlanets)) {
+                            fprintf(stderr, "Failed to reload planets after removal.\n");
+                            running = 0;
+                        } else {
+                            ResolveMoonParents(moons, NUM_MOONS, planets, numPlanets);
+                        }
+                    }
+                    removePanelOpen   = false;
+                    removeConfirmOpen = false;
+                    removeCandidateIdx = -1;
+                }
+            }
+        }
 
-        // CAMERA & PROJECTION
         int winW, winH;
         SDL_GetWindowSize(window, &winW, &winH);
         float cx = winW / 2.0f;
         float cy = winH / 2.0f;
-
         float fov = BASE_FOV * zoom;
 
         float cosYaw   = cosf(camYaw);
@@ -758,67 +776,46 @@ int main(int argc, char *argv[])
         float cosPitch = cosf(camPitch);
         float sinPitch = sinf(camPitch);
 
-        // SUN
-        ProjectXZ3D(0,0,
-            cosYaw, sinYaw,
-            cosPitch, sinPitch,
-            CAM_DIST, fov,
-            cx, cy, camPanX, camPanY,
-            &sunScreenX, &sunScreenY, &sunDepth);
+        ProjectXZ3D(0,0, cosYaw,sinYaw,cosPitch,sinPitch,
+                    CAM_DIST,fov,cx,cy,camPanX,camPanY,
+                    &sunScreenX,&sunScreenY,&sunDepth);
         sunScreenRadius = sun.radius * (fov / sunDepth);
 
-        // PLANETS
         for (int i = 0; i < numPlanets; i++) {
             Planet *p = &planets[i];
-
             p->angle += p->angularSpeed;
-
             p->worldX = cosf(p->angle) * p->orbitRadius;
             p->worldZ = sinf(p->angle) * p->orbitRadius;
-
-            ProjectXZ3D(
-                p->worldX, p->worldZ,
-                cosYaw, sinYaw,
-                cosPitch, sinPitch,
-                CAM_DIST, fov,
-                cx, cy, camPanX, camPanY,
-                &p->circle.x, &p->circle.y, &p->depth);
-
+            ProjectXZ3D(p->worldX,p->worldZ,
+                        cosYaw,sinYaw,cosPitch,sinPitch,
+                        CAM_DIST,fov,cx,cy,camPanX,camPanY,
+                        &p->circle.x,&p->circle.y,&p->depth);
             p->screenRadius = p->circle.radius * (fov / p->depth);
         }
 
-        // ASTEROIDS
-        for (int i = 0; i < NUM_ASTEROIDS; i++)
+        for (int i = 0; i < NUM_ASTEROIDS; i++) {
             asteroid_angle[i] += asteroid_speed[i];
+        }
 
-        // MOONS
         for (int i = 0; i < NUM_MOONS; i++) {
             struct Moon *m = &moons[i];
             m->angle += m->angularSpeed;
-
-            if (m->parentIndex < 0) {
-                moonDepth[i] = 1;
+            if (m->parentIndex < 0 || m->parentIndex >= numPlanets) {
+                moonDepth[i] = 1.0f;
                 continue;
             }
-
             Planet *parent = &planets[m->parentIndex];
-
             float mwx = parent->worldX + cosf(m->angle) * m->orbitRadius;
             float mwz = parent->worldZ + sinf(m->angle) * m->orbitRadius;
-
-            ProjectXZ3D(mwx, mwz,
-                cosYaw, sinYaw,
-                cosPitch, sinPitch,
-                CAM_DIST, fov,
-                cx, cy, camPanX, camPanY,
-                &m->x, &m->y, &moonDepth[i]);
+            ProjectXZ3D(mwx,mwz,
+                        cosYaw,sinYaw,cosPitch,sinPitch,
+                        CAM_DIST,fov,cx,cy,camPanX,camPanY,
+                        &m->x,&m->y,&moonDepth[i]);
         }
 
-        // DRAW FRAME
         SDL_SetRenderDrawColor(renderer, 0,0,0,255);
         SDL_RenderClear(renderer);
 
-        // Orbits
         SDL_SetRenderDrawColor(renderer, 80,80,80,255);
         const int SEG = 48;
         for (int i = 0; i < numPlanets; i++) {
@@ -829,40 +826,28 @@ int main(int argc, char *argv[])
                 float t = (float)s/SEG * 6.283185f;
                 float wx = cosf(t)*r;
                 float wz = sinf(t)*r;
-
                 float sx, sy, d;
-                ProjectXZ3D(wx, wz,
-                    cosYaw, sinYaw,
-                    cosPitch, sinPitch,
-                    CAM_DIST, fov,
-                    cx, cy, camPanX, camPanY,
-                    &sx, &sy, &d);
-
+                ProjectXZ3D(wx,wz,
+                            cosYaw,sinYaw,cosPitch,sinPitch,
+                            CAM_DIST,fov,cx,cy,camPanX,camPanY,
+                            &sx,&sy,&d);
                 if (hasPrev) SDL_RenderLine(renderer, px, py, sx, sy);
-                px = sx; py = sy;
-                hasPrev = 1;
+                px = sx; py = sy; hasPrev = 1;
             }
         }
 
-        // Asteroids
         SDL_SetRenderDrawColor(renderer, 160,160,160,255);
         for (int i = 0; i < NUM_ASTEROIDS; i++) {
             float wx = cosf(asteroid_angle[i]) * asteroid_radius[i];
             float wz = sinf(asteroid_angle[i]) * asteroid_radius[i];
-
             float sx, sy, d;
-            ProjectXZ3D(wx, wz,
-                        cosYaw, sinYaw,
-                        cosPitch, sinPitch,
-                        CAM_DIST, fov,
-                        cx, cy, camPanX, camPanY,
-                        &sx, &sy, &d);
-
-            if ((i & 1) == 0)
-                SDL_RenderPoint(renderer, sx, sy);
+            ProjectXZ3D(wx,wz,
+                        cosYaw,sinYaw,cosPitch,sinPitch,
+                        CAM_DIST,fov,cx,cy,camPanX,camPanY,
+                        &sx,&sy,&d);
+            if ((i & 1) == 0) SDL_RenderPoint(renderer, sx, sy);
         }
 
-        // Add Planet button
         SDL_SetRenderDrawColor(renderer, 40,40,120,255);
         SDL_RenderFillRect(renderer, &addButton);
         SDL_SetRenderDrawColor(renderer, 220,220,255,255);
@@ -870,32 +855,34 @@ int main(int argc, char *argv[])
         SDL_SetRenderDrawColor(renderer, 255,255,255,255);
         DrawText(renderer, addButton.x + 20, addButton.y + 12, "ADD PLANET", 2.0f);
 
-        // Selected planet outline
+        SDL_SetRenderDrawColor(renderer, 120,40,40,255);
+        SDL_RenderFillRect(renderer, &removeButton);
+        SDL_SetRenderDrawColor(renderer, 255,220,220,255);
+        SDL_RenderRect(renderer, &removeButton);
+        SDL_SetRenderDrawColor(renderer, 255,255,255,255);
+        DrawText(renderer, removeButton.x + 8, removeButton.y + 12, "REMOVE PLANET", 2.0f);
+
         if (selectedPlanet >= 0 && selectedPlanet < numPlanets) {
             Planet *p = &planets[selectedPlanet];
             SDL_SetRenderDrawColor(renderer, 255,255,255,255);
             DrawCircle(renderer, p->circle.x, p->circle.y, p->screenRadius + 6);
         }
 
-        // Sun
         SDL_SetRenderDrawColor(renderer, sun.r, sun.g, sun.b, 255);
         DrawFillCircle(renderer, sunScreenX, sunScreenY, sunScreenRadius);
 
-        // Planets
         for (int i = 0; i < numPlanets; i++) {
             Planet *p = &planets[i];
             SDL_SetRenderDrawColor(renderer, p->circle.r, p->circle.g, p->circle.b, 255);
             DrawFillCircle(renderer, p->circle.x, p->circle.y, p->screenRadius);
         }
 
-        // Moons
         for (int i = 0; i < NUM_MOONS; i++) {
             float r = moons[i].radius * (fov / moonDepth[i]);
             SDL_SetRenderDrawColor(renderer, moons[i].r, moons[i].g, moons[i].b, 255);
             DrawFillCircle(renderer, moons[i].x, moons[i].y, r);
         }
 
-        // Add Planet panel
         if (addPanelOpen) {
             SDL_SetRenderDrawColor(renderer, 0,0,0,160);
             SDL_FRect overlay = {0,0,(float)winW,(float)winH};
@@ -907,12 +894,11 @@ int main(int argc, char *argv[])
                 700.0f,
                 440.0f
             };
-
             SDL_SetRenderDrawColor(renderer, 30,30,30,240);
             SDL_RenderFillRect(renderer, &panel);
             SDL_SetRenderDrawColor(renderer, 220,220,220,255);
             SDL_RenderRect(renderer, &panel);
-
+            SDL_SetRenderDrawColor(renderer, 255,255,255,255);
             DrawText(renderer, panel.x + 20, panel.y + 15, "ADD NEW PLANET", 2.5f);
 
             float px = panel.x + 30.0f;
@@ -922,7 +908,6 @@ int main(int argc, char *argv[])
 
             for (int i = 0; i < FIELD_COUNT; i++) {
                 float y = py + i*rowH;
-                // Label
                 SDL_SetRenderDrawColor(renderer, 200,200,200,255);
                 DrawText(renderer, px, y, fields[i].label, 1.8f);
 
@@ -932,7 +917,6 @@ int main(int argc, char *argv[])
                     300.0f,
                     28.0f
                 };
-
                 if (i == activeField) {
                     SDL_SetRenderDrawColor(renderer, 80,80,160,255);
                     SDL_RenderFillRect(renderer, &box);
@@ -943,12 +927,10 @@ int main(int argc, char *argv[])
                     SDL_SetRenderDrawColor(renderer, 180,180,180,255);
                 }
                 SDL_RenderRect(renderer, &box);
-
                 SDL_SetRenderDrawColor(renderer, 255,255,255,255);
                 DrawText(renderer, box.x + 4, box.y + 5, fields[i].text, 1.8f);
             }
 
-            // Save / Cancel buttons
             SDL_FRect saveBtn = {
                 panel.x + 80.0f,
                 panel.y + panel.h - 70.0f,
@@ -977,15 +959,119 @@ int main(int argc, char *argv[])
             DrawText(renderer, cancelBtn.x + 25, cancelBtn.y + 12, "CANCEL", 2.0f);
         }
 
+        if (removePanelOpen) {
+            SDL_SetRenderDrawColor(renderer, 0,0,0,160);
+            SDL_FRect overlay = {0,0,(float)winW,(float)winH};
+            SDL_RenderFillRect(renderer, &overlay);
+
+            SDL_FRect panel = {
+                winW * 0.5f - 350.0f,
+                winH * 0.5f - 220.0f,
+                700.0f,
+                440.0f
+            };
+            SDL_SetRenderDrawColor(renderer, 30,30,30,240);
+            SDL_RenderFillRect(renderer, &panel);
+            SDL_SetRenderDrawColor(renderer, 220,220,220,255);
+            SDL_RenderRect(renderer, &panel);
+
+            SDL_SetRenderDrawColor(renderer, 255,255,255,255);
+            DrawText(renderer, panel.x + 20, panel.y + 15, "REMOVE PLANET", 2.5f);
+
+            float px = panel.x + 30.0f;
+            float py = panel.y + 60.0f;
+            float rowH = 32.0f;
+            int maxRows = (int)((panel.h - 140.0f) / rowH);
+            if (maxRows > numPlanets) maxRows = numPlanets;
+
+            for (int i = 0; i < maxRows; i++) {
+                SDL_FRect rowRect = {
+                    px,
+                    py + i*rowH,
+                    panel.w - 60.0f,
+                    rowH - 4.0f
+                };
+                if (removeConfirmOpen && i == removeCandidateIdx) {
+                    SDL_SetRenderDrawColor(renderer, 80,40,40,255);
+                } else {
+                    SDL_SetRenderDrawColor(renderer, 50,50,50,255);
+                }
+                SDL_RenderFillRect(renderer, &rowRect);
+                SDL_SetRenderDrawColor(renderer, 150,150,150,255);
+                SDL_RenderRect(renderer, &rowRect);
+                SDL_SetRenderDrawColor(renderer, 255,255,255,255);
+                DrawText(renderer, rowRect.x + 10, rowRect.y + 6, planets[i].name, 2.0f);
+            }
+
+            SDL_FRect closeBtn = {
+                panel.x + panel.w - 180.0f,
+                panel.y + panel.h - 60.0f,
+                140.0f,
+                35.0f
+            };
+            SDL_SetRenderDrawColor(renderer, 80,80,80,255);
+            SDL_RenderFillRect(renderer, &closeBtn);
+            SDL_SetRenderDrawColor(renderer, 200,200,200,255);
+            SDL_RenderRect(renderer, &closeBtn);
+            SDL_SetRenderDrawColor(renderer, 255,255,255,255);
+            DrawText(renderer, closeBtn.x + 20, closeBtn.y + 8, "CLOSE", 2.0f);
+
+            if (removeConfirmOpen && removeCandidateIdx >= 0 &&
+                removeCandidateIdx < numPlanets) {
+
+                char buf[128];
+                snprintf(buf, sizeof(buf), "DELETE PLANET: %s ?", planets[removeCandidateIdx].name);
+
+                SDL_FRect confirmBox = {
+                    panel.x + 50.0f,
+                    panel.y + panel.h - 150.0f,
+                    panel.w - 100.0f,
+                    70.0f
+                };
+                SDL_SetRenderDrawColor(renderer, 60,30,30,255);
+                SDL_RenderFillRect(renderer, &confirmBox);
+                SDL_SetRenderDrawColor(renderer, 220,200,200,255);
+                SDL_RenderRect(renderer, &confirmBox);
+
+                SDL_SetRenderDrawColor(renderer, 255,255,255,255);
+                DrawText(renderer, confirmBox.x + 15, confirmBox.y + 10, buf, 2.0f);
+
+                SDL_FRect yesBtn = {
+                    confirmBox.x + 40.0f,
+                    confirmBox.y + 30.0f,
+                    180.0f,
+                    30.0f
+                };
+                SDL_FRect noBtn = {
+                    confirmBox.x + confirmBox.w - 220.0f,
+                    confirmBox.y + 30.0f,
+                    180.0f,
+                    30.0f
+                };
+
+                SDL_SetRenderDrawColor(renderer, 40,120,40,255);
+                SDL_RenderFillRect(renderer, &yesBtn);
+                SDL_SetRenderDrawColor(renderer, 220,255,220,255);
+                SDL_RenderRect(renderer, &yesBtn);
+                SDL_SetRenderDrawColor(renderer, 255,255,255,255);
+                DrawText(renderer, yesBtn.x + 60, yesBtn.y + 6, "YES", 2.0f);
+
+                SDL_SetRenderDrawColor(renderer, 120,40,40,255);
+                SDL_RenderFillRect(renderer, &noBtn);
+                SDL_SetRenderDrawColor(renderer, 255,220,220,255);
+                SDL_RenderRect(renderer, &noBtn);
+                SDL_SetRenderDrawColor(renderer, 255,255,255,255);
+                DrawText(renderer, noBtn.x + 65, noBtn.y + 6, "NO", 2.0f);
+            }
+        }
+
         SDL_RenderPresent(renderer);
         SDL_Delay(16);
     }
 
     free(planets);
-
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
-
     return 0;
 }
